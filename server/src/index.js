@@ -149,7 +149,9 @@ app.patch('/api/me/profile-picture', { preHandler: app.authenticate }, async (re
   let profilePicture;
 
   try {
-    profilePicture = normalizeProfilePictureInput(request.body?.profilePicture);
+    profilePicture = normalizeProfilePictureInput(request.body?.profilePicture, {
+      allowImage: Number(request.userId) === TBD_ACCOUNT_ID
+    });
   } catch (error) {
     return reply.code(400).send({ error: error.message });
   }
@@ -799,8 +801,12 @@ function toUserPayload(user) {
   };
 }
 
-function normalizeProfilePictureInput(value) {
+function normalizeProfilePictureInput(value, { allowImage = false } = {}) {
   if (isImageProfilePicture(value)) {
+    if (!allowImage) {
+      throw new Error('Only the tbd account can use image avatars.');
+    }
+
     return value.trim();
   }
 
