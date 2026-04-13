@@ -5,7 +5,7 @@ import dotenv from 'dotenv';
 import { readFile } from 'node:fs/promises';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createPool } from './db.js';
-import { allowMessage } from './rateLimit.js';
+import { allowLoginAttempt, allowMessage } from './rateLimit.js';
 import { ensureSchema } from './schema.js';
 import {
   assertEnv,
@@ -29,6 +29,12 @@ const DEFAULT_GROUP_NAME_COLOR = '#eeeeee';
 const TBD_ACCOUNT_ID = 1;
 const TBD_ACCOUNT_NAME = 'tbd';
 const TBD_ACCOUNT_IMAGE_URL = new URL('../../IMG_1687.JPG', import.meta.url);
+const CLIENT_ORIGIN_ALLOWLIST = new Set(
+  String(process.env.CLIENT_ORIGIN || '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean)
+);
 
 const app = Fastify({ logger: true });
 const pool = createPool();
@@ -40,6 +46,22 @@ await seedTbdAccountProfilePicture();
 await app.register(cors, {
   origin: process.env.CLIENT_ORIGIN || true,
   credentials: true
+});
+
+app.addHook('onSend', async (_request, reply, payload) => {
+  if (!reply.hasHeader('X-Content-Type-Options')) {
+    reply.header('X-Content-Type-Options', 'nosniff');
+  }
+
+  if (!reply.hasHeader('Content-Security-Policy')) {
+    reply.header('Content-Security-Policy', "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self'; connect-src 'self' ws: wss:");
+  }
+
+  if (!reply.hasHeader('Strict-Transport-Security')) {
+    reply.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  }
+
+  return payload;
 });
 
 app.decorate('authenticate', async (request, reply) => {
@@ -87,6 +109,10 @@ app.post('/api/auth/signup', async (request, reply) => {
 app.post('/api/auth/login', async (request, reply) => {
   const { userNumber, password } = request.body || {};
   const userId = Number(userNumber);
+
+  if (!allowLoginAttempt({ userId: Number.isInteger(userId) ? userId : 'unknown', ip: request.ip })) {
+    return reply.code(429).send({ error: 'Too many login attempts. Try again later.' });
+  }
 
   if (!Number.isInteger(userId) || typeof password !== 'string') {
     return reply.code(400).send({ error: 'Invalid credentials.' });
@@ -301,9 +327,17 @@ app.post('/api/groups/:threadId/members', { preHandler: app.authenticate }, asyn
   const threadId = String(request.params.threadId);
   const memberNumbers = Array.isArray(request.body?.memberNumbers) ? request.body.memberNumbers : [];
 
-  const thread = await getThreadById(threadId, request.userId);
+  const thread = await getThreadRow(threadId);
   if (!thread || thread.type !== 'group') {
     return reply.code(404).send({ error: 'Group not found.' });
+  }
+
+  if (!(await canAccessThread(threadId, request.userId))) {
+    return reply.code(404).send({ error: 'Group not found.' });
+  }
+
+  if (Number(thread.created_by) !== Number(request.userId)) {
+    return reply.code(403).send({ error: 'Only the group creator can add members.' });
   }
 
   const currentMembers = await pool.query('SELECT user_id FROM thread_members WHERE thread_id = $1', [threadId]);
@@ -340,6 +374,10 @@ app.post('/api/threads/:threadId/leave', { preHandler: app.authenticate }, async
     return reply.code(400).send({ error: 'You cannot leave global.' });
   }
 
+  if (!(await canAccessThread(threadId, request.userId))) {
+    return reply.code(404).send({ error: 'Thread not found.' });
+  }
+
   await leaveThread(threadId, request.userId);
   return { ok: true, deleted: true };
 });
@@ -349,6 +387,10 @@ app.post('/api/groups/:threadId/leave', { preHandler: app.authenticate }, async 
 
   const thread = await getThreadRow(threadId);
   if (!thread || thread.type !== 'group') {
+    return reply.code(404).send({ error: 'Group not found.' });
+  }
+
+  if (!(await canAccessThread(threadId, request.userId))) {
     return reply.code(404).send({ error: 'Group not found.' });
   }
 
@@ -434,6 +476,11 @@ server.on('upgrade', (request, socket, head) => {
   const url = new URL(request.url, 'http://localhost');
 
   if (url.pathname !== '/ws') {
+    socket.destroy();
+    return;
+  }
+
+  if (!isAllowedWebSocketOrigin(request.headers.origin)) {
     socket.destroy();
     return;
   }
@@ -686,15 +733,55 @@ function broadcastThreadUpdate(threadId, message) {
 
 function broadcastUserUpdate(userRow) {
   const user = toUserPayload(userRow);
+  if (!user) {
+    return;
+  }
+
   const payload = JSON.stringify({ type: 'user:updated', user });
 
-  for (const [socket] of clients.entries()) {
+  for (const [socket, viewerId] of clients.entries()) {
     if (socket.readyState !== WebSocket.OPEN) {
       continue;
     }
 
-    socket.send(payload);
+    usersShareThread(user.id, viewerId)
+      .then((sharedThread) => {
+        if (sharedThread && socket.readyState === WebSocket.OPEN) {
+          socket.send(payload);
+        }
+      })
+      .catch(() => {
+      });
   }
+}
+
+function isAllowedWebSocketOrigin(origin) {
+  if (CLIENT_ORIGIN_ALLOWLIST.size === 0) {
+    return true;
+  }
+
+  if (typeof origin !== 'string' || !origin.trim()) {
+    return false;
+  }
+
+  return CLIENT_ORIGIN_ALLOWLIST.has(origin);
+}
+
+async function usersShareThread(aUserId, bUserId) {
+  if (Number(aUserId) === Number(bUserId)) {
+    return true;
+  }
+
+  const result = await pool.query(
+    `SELECT 1
+     FROM thread_members tm1
+     JOIN thread_members tm2 ON tm2.thread_id = tm1.thread_id
+     WHERE tm1.user_id = $1 AND tm2.user_id = $2
+     LIMIT 1`,
+    [aUserId, bUserId]
+  );
+
+  return result.rowCount > 0;
 }
 
 function toUserPayload(user) {
