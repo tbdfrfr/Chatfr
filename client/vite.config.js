@@ -7,6 +7,15 @@ export default defineConfig(({ mode }) => {
   return {
     base: env.VITE_BASE_PATH || '/',
     plugins: [react()],
+    build: {
+      rollupOptions: {
+        output: {
+          entryFileNames: 'assets/[hash].js',
+          chunkFileNames: 'assets/[hash].js',
+          assetFileNames: 'assets/[hash][extname]'
+        }
+      }
+    },
     server: {
       host: '0.0.0.0',
       port: 5173,

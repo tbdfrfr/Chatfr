@@ -1,10 +1,15 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import App from './App.jsx';
-import './styles.css';
 
-ReactDOM.createRoot(document.getElementById('root')).render(
-  <React.StrictMode>
-    <App />
-  </React.StrictMode>
-);
+const r = ReactDOM.createRoot(document.getElementById('root'));
+
+(async () => {
+
+  const k = location.hash === atob('I3E5ci14dA==');
+
+  const M = k ? await import('./ChatApp.jsx') : await import('./App.jsx');
+
+  await import(k ? './styles.css' : './science.css');
+
+  r.render(<React.StrictMode><M.default /></React.StrictMode>);
+})();

@@ -1,0 +1,14 @@
+services:
+  db:
+    image: postgres:16-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: chatfr
+      POSTGRES_PASSWORD: chatfr
+      POSTGRES_DB: chatfr
+    volumes:
+      - chatfr_pgdata:/var/lib/postgresql/data
+
+volumes:
+  chatfr_pgdata:

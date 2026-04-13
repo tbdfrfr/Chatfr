@@ -1,6 +1,15 @@
 node_modules
 dist
 .env
+.env.*
+!.env.example
+!client/.env.example
+*.log
+*.key
+*.pem
+.vite
+coverage
+*.tsbuildinfo
 .DS_Store
 client/node_modules
 client/dist

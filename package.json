@@ -1,0 +1,19 @@
+{
+  "name": "chatfr",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "client",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently -k \"npm run dev --workspace server\" \"npm run dev --workspace client\"",
+    "start": "npm run start --workspace server",
+    "build": "npm run check --workspace server && npm run build --workspace client",
+    "db:start": "docker compose up -d db",
+    "db:stop": "docker compose down"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
