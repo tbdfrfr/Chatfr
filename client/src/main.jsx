@@ -1,6 +1,5 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import './styles.css';
 
 const r = ReactDOM.createRoot(document.getElementById('root'));
 
@@ -12,11 +11,9 @@ const r = ReactDOM.createRoot(document.getElementById('root'));
   document.documentElement.classList.toggle('science-mode', scienceMode);
   document.body.classList.toggle('science-mode', scienceMode);
 
-  const M = k ? await import('./ChatApp.jsx') : await import('./App.jsx');
+  await import(k ? './styles.css' : './science.css');
 
-  if (scienceMode) {
-    await import('./science.css');
-  }
+  const M = k ? await import('./ChatApp.jsx') : await import('./App.jsx');
 
   r.render(<React.StrictMode><M.default /></React.StrictMode>);
 })();
