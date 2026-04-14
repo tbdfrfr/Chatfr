@@ -830,11 +830,44 @@ textarea:focus {
   gap: 8px;
 }
 
+.sidebar-actions-left {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
 .circle-button {
   width: 42px;
   height: 42px;
   text-align: center;
   padding: 0;
+}
+
+.sidebar-coffee-link {
+  flex: 1;
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text);
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  text-decoration: none;
+  transition: background 120ms ease, border-color 120ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 42px;
+}
+
+.sidebar-coffee-link:hover {
+  background: #343434;
+  border-color: #555555;
+}
+
+.sidebar-coffee-link:active {
+  transform: translateY(1px);
 }
 
 .thread-list {

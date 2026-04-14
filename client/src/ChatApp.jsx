@@ -31,7 +31,7 @@ const GROUP_NAME_FONT_OPTIONS = [
   { id: 'josefin-sans', label: 'Josefin Sans' },
   { id: 'orbitron', label: 'Orbitron' }
 ];
-const DEFAULT_GROUP_NAME_COLOR = GROUP_NAME_COLOR_OPTIONS[0];
+const DEFAULT_GROUP_NAME_COLOR = '#ffffff';
 const DEFAULT_GROUP_NAME_FONT = GROUP_NAME_FONT_OPTIONS[0].id;
 
 export default function App() {
@@ -551,10 +551,13 @@ function ChatApp({ token, me, onMeChange, onLogout }) {
     <Shell wide>
       <aside className="sidebar">
         <div className="sidebar-actions">
-          <button className="circle-button" type="button" onClick={openCreateDialog}>+</button>
-          <button className="circle-button" type="button" aria-label="Settings" title="Settings" onClick={() => setSettingsOpen(true)}>
-            {'\u2699'}
-          </button>
+          <div className="sidebar-actions-left">
+            <button className="circle-button" type="button" onClick={openCreateDialog}>+</button>
+            <button className="circle-button" type="button" aria-label="Settings" title="Settings" onClick={() => setSettingsOpen(true)} style={{ fontSize: '1.8rem' }}>
+              {'\u2699'}
+            </button>
+          </div>
+          <a className="sidebar-coffee-link" href="https://buymeacoffee.com/tbdfr" target="_blank" rel="noopener noreferrer">☕ Buy me a coffee</a>
         </div>
 
         <label className="field thread-search">
