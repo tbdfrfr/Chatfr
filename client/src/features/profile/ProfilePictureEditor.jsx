@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
+import {
+  DEFAULT_PROFILE_PICTURE_COLOR,
+  PROFILE_PICTURE_EMPTY,
+  normalizeProfilePicture
+} from './profilePictureUtils.js';
 
-const PROFILE_PICTURE_GRID_SIZE = 7;
-const PROFILE_PICTURE_CELL_COUNT = PROFILE_PICTURE_GRID_SIZE * PROFILE_PICTURE_GRID_SIZE;
-const PROFILE_PICTURE_EMPTY = Array.from({ length: PROFILE_PICTURE_CELL_COUNT }, () => null);
-const PROFILE_PICTURE_PALETTE = ['#0f0f0f', '#ffffff', '#e63946', '#f4a261', '#f1fa8c', '#2a9d8f', '#457b9d', '#8338ec'];
+export { normalizeProfilePicture } from './profilePictureUtils.js';
 
 export function ProfilePictureEditor({ value, onChange }) {
-  const [selectedColor, setSelectedColor] = useState(PROFILE_PICTURE_PALETTE[0]);
+  const [selectedHsv, setSelectedHsv] = useState(() => hexToHsv(DEFAULT_PROFILE_PICTURE_COLOR));
+  const [isErasing, setIsErasing] = useState(false);
 
   if (typeof value === 'string') {
     return (
@@ -21,6 +24,14 @@ export function ProfilePictureEditor({ value, onChange }) {
   }
 
   const normalized = normalizeProfilePicture(value);
+  const selectedColor = hsvToHex(selectedHsv.hue, selectedHsv.saturation, selectedHsv.value);
+  const fullValueColor = hsvToHex(selectedHsv.hue, selectedHsv.saturation, 100);
+  const darkness = Math.round(100 - selectedHsv.value);
+  const shadeThumbStyle = { left: `${darkness}%` };
+  const markerStyle = {
+    left: `${50 + Math.cos(degreesToRadians(selectedHsv.hue)) * selectedHsv.saturation * 0.5}%`,
+    top: `${50 + Math.sin(degreesToRadians(selectedHsv.hue)) * selectedHsv.saturation * 0.5}%`
+  };
 
   const setCell = (index, color) => {
     const next = [...normalized];
@@ -28,26 +39,54 @@ export function ProfilePictureEditor({ value, onChange }) {
     onChange(next);
   };
 
+  const chooseColor = (hue, saturation, valueLevel = selectedHsv.value) => {
+    setSelectedHsv({
+      hue: (hue + 360) % 360,
+      saturation: clamp(saturation, 0, 100),
+      value: clamp(valueLevel, 0, 100)
+    });
+    setIsErasing(false);
+  };
+
+  const pickWheelColor = (event) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const radius = rect.width / 2;
+    const x = event.clientX - rect.left - radius;
+    const y = event.clientY - rect.top - radius;
+    const distance = Math.min(Math.hypot(x, y), radius);
+    const hue = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    const saturation = Math.round((distance / radius) * 100);
+
+    chooseColor(hue, saturation);
+  };
+
+  const moveWheelColor = (event) => {
+    if (event.buttons === 1) {
+      pickWheelColor(event);
+    }
+  };
+
+  const handleWheelKeyDown = (event) => {
+    const step = event.shiftKey ? 10 : 5;
+
+    if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      chooseColor((selectedHsv.hue - step + 360) % 360, selectedHsv.saturation);
+    } else if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      chooseColor((selectedHsv.hue + step) % 360, selectedHsv.saturation);
+    } else if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      chooseColor(selectedHsv.hue, Math.max(0, selectedHsv.saturation - step));
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      chooseColor(selectedHsv.hue, Math.min(100, selectedHsv.saturation + step));
+    }
+  };
+
   return (
     <div className="profile-picture-editor">
-      <div className="editor-controls">
-        <div className="palette-row" role="listbox" aria-label="Profile picture colors">
-          {PROFILE_PICTURE_PALETTE.map((color) => (
-            <button
-              key={color}
-              className={`color-swatch ${selectedColor === color ? 'active' : ''}`}
-              type="button"
-              style={{ backgroundColor: color }}
-              onClick={() => setSelectedColor(color)}
-              aria-label={`Use color ${color}`}
-            />
-          ))}
-          <button className={`ghost ${selectedColor === null ? 'active-tool' : ''}`} type="button" onClick={() => setSelectedColor(null)} aria-label="Use eraser">
-            Eraser
-          </button>
-          <button className="ghost" type="button" onClick={() => onChange([...PROFILE_PICTURE_EMPTY])}>Clear</button>
-        </div>
-
+      <div className="profile-picture-grid-panel">
         <div className="pixel-editor-grid" role="grid" aria-label="Profile picture editor">
           {normalized.map((color, index) => (
             <button
@@ -55,7 +94,7 @@ export function ProfilePictureEditor({ value, onChange }) {
               type="button"
               className={`pixel-editor-cell ${color ? 'filled' : ''}`}
               style={color ? { background: color } : undefined}
-              onClick={() => setCell(index, selectedColor)}
+              onClick={() => setCell(index, isErasing ? null : selectedColor)}
               onContextMenu={(event) => {
                 event.preventDefault();
                 setCell(index, null);
@@ -64,27 +103,116 @@ export function ProfilePictureEditor({ value, onChange }) {
             />
           ))}
         </div>
-
+      </div>
+      <div className="profile-picture-picker-panel">
+        <div
+          className="profile-color-wheel"
+          role="slider"
+          aria-label="Color wheel"
+          aria-valuemin={0}
+          aria-valuemax={360}
+          aria-valuenow={Math.round(selectedHsv.hue)}
+          aria-valuetext={selectedColor}
+          tabIndex={0}
+          onPointerDown={(event) => {
+            event.currentTarget.setPointerCapture(event.pointerId);
+            pickWheelColor(event);
+          }}
+          onPointerMove={moveWheelColor}
+          onKeyDown={handleWheelKeyDown}
+        >
+          <span className="profile-color-wheel-marker" style={markerStyle} />
+        </div>
+        <div className="profile-shade-control" style={{ '--shade-gradient': `linear-gradient(90deg, ${fullValueColor}, #000000)` }}>
+          <span className="profile-shade-track" aria-hidden="true" />
+          <span className="profile-shade-thumb" style={shadeThumbStyle} aria-hidden="true" />
+          <input
+            className="profile-shade-slider"
+            type="range"
+            min="0"
+            max="100"
+            value={darkness}
+            onChange={(event) => chooseColor(selectedHsv.hue, selectedHsv.saturation, 100 - Number(event.target.value))}
+            aria-label="Color darkness"
+          />
+        </div>
+      </div>
+      <div className="profile-picture-controls">
+        <div className="profile-picture-tool-row">
+          <button className={`ghost ${isErasing ? 'active-tool' : ''}`} type="button" onClick={() => setIsErasing(true)} aria-label="Use eraser">
+            Eraser
+          </button>
+          <button className="ghost" type="button" onClick={() => onChange([...PROFILE_PICTURE_EMPTY])}>Clear</button>
+        </div>
       </div>
     </div>
   );
 }
 
-export function normalizeProfilePicture(profilePicture) {
-  if (typeof profilePicture === 'string' && /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=]+$/i.test(profilePicture.trim())) {
-    return profilePicture.trim();
-  }
+function hexToHsv(color) {
+  const red = parseInt(color.slice(1, 3), 16) / 255;
+  const green = parseInt(color.slice(3, 5), 16) / 255;
+  const blue = parseInt(color.slice(5, 7), 16) / 255;
+  const max = Math.max(red, green, blue);
+  const min = Math.min(red, green, blue);
+  const delta = max - min;
+  let hue = 0;
 
-  if (!Array.isArray(profilePicture) || profilePicture.length !== PROFILE_PICTURE_CELL_COUNT) {
-    return [...PROFILE_PICTURE_EMPTY];
-  }
-
-  return profilePicture.map((cell) => {
-    if (typeof cell !== 'string') {
-      return null;
+  if (delta !== 0) {
+    if (max === red) {
+      hue = 60 * (((green - blue) / delta) % 6);
+    } else if (max === green) {
+      hue = 60 * ((blue - red) / delta + 2);
+    } else {
+      hue = 60 * ((red - green) / delta + 4);
     }
+  }
 
-    const color = cell.trim().toLowerCase();
-    return /^#[0-9a-f]{6}$/.test(color) ? color : null;
-  });
+  return {
+    hue: (hue + 360) % 360,
+    saturation: max === 0 ? 0 : (delta / max) * 100,
+    value: max * 100
+  };
+}
+
+function hsvToHex(hue, saturation, value) {
+  const chroma = (value / 100) * (saturation / 100);
+  const huePrime = hue / 60;
+  const x = chroma * (1 - Math.abs((huePrime % 2) - 1));
+  const match = value / 100 - chroma;
+  let red = 0;
+  let green = 0;
+  let blue = 0;
+
+  if (huePrime >= 0 && huePrime < 1) {
+    red = chroma;
+    green = x;
+  } else if (huePrime < 2) {
+    red = x;
+    green = chroma;
+  } else if (huePrime < 3) {
+    green = chroma;
+    blue = x;
+  } else if (huePrime < 4) {
+    green = x;
+    blue = chroma;
+  } else if (huePrime < 5) {
+    red = x;
+    blue = chroma;
+  } else {
+    red = chroma;
+    blue = x;
+  }
+
+  return `#${[red, green, blue].map((channel) => (
+    Math.round((channel + match) * 255).toString(16).padStart(2, '0')
+  )).join('')}`;
+}
+
+function degreesToRadians(degrees) {
+  return degrees * Math.PI / 180;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }

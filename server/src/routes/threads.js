@@ -145,50 +145,6 @@ export async function threadRoutes(app, options) {
     return { ok: true, deleted: true };
   });
 
-  app.post('/api/groups/:threadId/members', { preHandler: app.authenticate }, async (request, reply) => {
-    const threadId = String(request.params.threadId);
-    const memberNumbers = Array.isArray(request.body?.memberNumbers) ? request.body.memberNumbers : [];
-
-    const thread = await getThreadRow(threadId);
-    if (!thread || thread.type !== 'group') {
-      return reply.code(404).send({ error: 'Group not found.' });
-    }
-
-    if (!(await canAccessThread(threadId, request.userId))) {
-      return reply.code(404).send({ error: 'Group not found.' });
-    }
-
-    if (Number(thread.created_by) !== Number(request.userId)) {
-      return reply.code(403).send({ error: 'Only the group creator can add members.' });
-    }
-
-    const currentMembers = await pool.query('SELECT user_id FROM thread_members WHERE thread_id = $1', [threadId]);
-    const memberIds = new Set(currentMembers.rows.map((row) => Number(row.user_id)));
-
-    for (const value of memberNumbers) {
-      const userId = Number(value);
-      if (!Number.isInteger(userId)) {
-        continue;
-      }
-
-      if (userId === request.userId) {
-        continue;
-      }
-
-      const user = await getUser(userId);
-      if (user && !memberIds.has(userId)) {
-        if (memberIds.size >= MAX_GROUP_MEMBER_COUNT) {
-          return reply.code(400).send({ error: `Groups can have up to ${MAX_GROUP_MEMBER_COUNT} users.` });
-        }
-
-        await pool.query('INSERT INTO thread_members (thread_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING', [threadId, userId]);
-        memberIds.add(userId);
-      }
-    }
-
-    return { thread: await getThreadById(threadId, request.userId) };
-  });
-
   app.post('/api/threads/:threadId/leave', { preHandler: app.authenticate }, async (request, reply) => {
     const threadId = String(request.params.threadId);
 
@@ -198,22 +154,6 @@ export async function threadRoutes(app, options) {
 
     if (!(await canAccessThread(threadId, request.userId))) {
       return reply.code(404).send({ error: 'Thread not found.' });
-    }
-
-    await leaveThread(threadId, request.userId);
-    return { ok: true, deleted: true };
-  });
-
-  app.post('/api/groups/:threadId/leave', { preHandler: app.authenticate }, async (request, reply) => {
-    const threadId = String(request.params.threadId);
-
-    const thread = await getThreadRow(threadId);
-    if (!thread || thread.type !== 'group') {
-      return reply.code(404).send({ error: 'Group not found.' });
-    }
-
-    if (!(await canAccessThread(threadId, request.userId))) {
-      return reply.code(404).send({ error: 'Group not found.' });
     }
 
     await leaveThread(threadId, request.userId);

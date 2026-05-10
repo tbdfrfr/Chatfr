@@ -35,26 +35,6 @@ export async function userRoutes(app, options) {
     return reply.send({ user: toUserPayload(user) });
   });
 
-  app.get('/api/users/search', { preHandler: app.authenticate }, async (request) => {
-    const query = String(request.query?.query ?? '').trim();
-
-    if (!query) {
-      return { users: [] };
-    }
-
-    const result = await pool.query(
-      `SELECT id, display_name, profile_picture
-       FROM users
-       WHERE (id::text LIKE $1 OR COALESCE(display_name, '') ILIKE $2)
-         AND id <> $3
-       ORDER BY id ASC
-       LIMIT 8`,
-      [`${query}%`, `%${query}%`, request.userId]
-    );
-
-    return { users: result.rows.map(toUserPayload) };
-  });
-
   app.get('/api/users/:userNumber', { preHandler: app.authenticate }, async (request, reply) => {
     const userId = Number(request.params.userNumber);
 

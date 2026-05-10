@@ -1,7 +1,3 @@
-import {
-  normalizeGroupNameColor,
-  normalizeGroupNameFont
-} from './chatFormatting.js';
 import { createMessageDomain } from './messageDomain.js';
 import { createThreadQueryDomain } from './threadQueryDomain.js';
 import { createThreadMutationDomain } from './threadMutationDomain.js';
@@ -37,7 +33,6 @@ export function createDomainServices({ pool, clientOrigin, clients = new Map() }
     joinGlobal: globalThreadDomain.joinGlobal,
     getUser: userQueryDomain.getUser,
     listThreads: threadQueryDomain.listThreads,
-    getThreadSummary: threadQueryDomain.getThreadSummary,
     getThreadById: threadQueryDomain.getThreadById,
     leaveThread: threadMutationDomain.leaveThread,
     getThreadRow: threadQueryDomain.getThreadRow,
@@ -47,10 +42,6 @@ export function createDomainServices({ pool, clientOrigin, clients = new Map() }
     broadcastThreadUpdate: realtimeDomain.broadcastThreadUpdate,
     broadcastUserUpdate: realtimeDomain.broadcastUserUpdate,
     isAllowedWebSocketOrigin: realtimeDomain.isAllowedWebSocketOrigin,
-    usersShareThread: threadAccessDomain.usersShareThread,
-    seedTbdAccountProfilePicture: profileDomain.seedTbdAccountProfilePicture,
-    normalizeGroupNameColor,
-    normalizeGroupNameFont,
-    getDirectLabel: threadQueryDomain.getDirectLabel
+    seedTbdAccountProfilePicture: profileDomain.seedTbdAccountProfilePicture
   };
 }

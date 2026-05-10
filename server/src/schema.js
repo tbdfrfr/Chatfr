@@ -10,8 +10,6 @@ export async function ensureSchema(pool) {
 
     ALTER TABLE users ADD COLUMN IF NOT EXISTS profile_picture JSONB;
 
-    ALTER TABLE users DROP COLUMN IF EXISTS recovery_code_hash;
-
     CREATE TABLE IF NOT EXISTS threads (
       id TEXT PRIMARY KEY,
       type TEXT NOT NULL CHECK (type IN ('global', 'dm', 'group')),

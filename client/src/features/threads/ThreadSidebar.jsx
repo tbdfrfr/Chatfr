@@ -24,11 +24,10 @@ export function ThreadSidebar({
           </button>
         </div>
         <a className="sidebar-coffee-link" href="https://buymeacoffee.com/tbdfr" target="_blank" rel="noopener noreferrer">☕ Buy me a coffee</a>
-      </div>      <br />
-      <label className="field thread-search">
-        <span>Search threads</span>
-        <input value={threadSearch} onChange={(event) => onThreadSearchChange?.(event.target.value)} placeholder="Find a thread or person" type="search" />
-      </label>
+      </div>
+      <div className="field thread-search">
+        <input aria-label="Search threads" value={threadSearch} onChange={(event) => onThreadSearchChange?.(event.target.value)} placeholder="Find a thread or person" type="search" />
+      </div>
 
       <div className="thread-list">
         <ThreadButton thread={{ id: 'global', type: 'global', name: 'Global' }} meId={me.id} active={currentThreadId === 'global'} onClick={() => onSelectThread('global')} />

@@ -7,6 +7,9 @@ export function SettingsModal({ token, me, onClose, onSaved, onLogout }) {
   const [profileDraft, setProfileDraft] = useState(me.displayName || '');
   const [profilePictureDraft, setProfilePictureDraft] = useState(() => normalizeProfilePicture(me.profilePicture));
   const [status, setStatus] = useState('');
+  const originalDisplayName = me.displayName || '';
+  const originalProfilePicture = normalizeProfilePicture(me.profilePicture);
+  const hasProfileChanges = profileDraft !== originalDisplayName || !sameProfilePicture(profilePictureDraft, originalProfilePicture);
 
   useEffect(() => {
     setProfileDraft(me.displayName || '');
@@ -30,6 +33,7 @@ export function SettingsModal({ token, me, onClose, onSaved, onLogout }) {
       ]);
 
       const meData = await api('/api/me', { token });
+      setProfileDraft(meData.user.displayName || '');
       setProfilePictureDraft(normalizeProfilePicture(meData.user.profilePicture));
       setStatus('Saved.');
       onSaved(meData.user);
@@ -49,16 +53,15 @@ export function SettingsModal({ token, me, onClose, onSaved, onLogout }) {
           <span>Profile picture (7x7)</span>
           <ProfilePictureEditor value={profilePictureDraft} onChange={setProfilePictureDraft} />
         </div>
-        <button className="primary settings-save" type="button" onClick={updateProfile}>Save user settings</button>
+        <button className={`primary settings-save ${hasProfileChanges ? 'dirty' : ''}`} type="button" onClick={updateProfile}>Save user settings</button>
         {status ? <div className="muted-text settings-status">{status}</div> : null}
-        <div className="divider" />
-        <div className="settings-card">
-          <strong>Theme settings</strong>
-          <div className="muted-text">NOT Coming soon.</div>
-        </div>
         <div className="divider" />
         <button className="ghost settings-logout" type="button" onClick={onLogout}>Log out</button>
       </div>
     </Modal>
   );
+}
+
+function sameProfilePicture(left, right) {
+  return JSON.stringify(normalizeProfilePicture(left)) === JSON.stringify(normalizeProfilePicture(right));
 }

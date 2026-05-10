@@ -3,7 +3,7 @@ import { createThreadAccessDomain } from './threadAccessDomain.js';
 
 export function createThreadQueryDomain({ pool }) {
   const summaryDomain = createThreadSummaryDomain({ pool });
-  const { getThreadSummary, getDirectLabel } = summaryDomain;
+  const { getThreadSummary } = summaryDomain;
   const accessDomain = createThreadAccessDomain({ pool });
   const { canAccessThread } = accessDomain;
 
@@ -41,8 +41,6 @@ export function createThreadQueryDomain({ pool }) {
     return threads;
   }
 
-
-
   async function getThreadById(threadId, userId) {
     const result = await pool.query('SELECT * FROM threads WHERE id = $1', [threadId]);
     const thread = result.rows[0];
@@ -66,14 +64,9 @@ export function createThreadQueryDomain({ pool }) {
     return result.rows[0] || null;
   }
 
-  // getDirectLabel provided by threadSummaryDomain via summaryDomain.getDirectLabel
-
   return {
-    canAccessThread,
     listThreads,
-    getThreadSummary,
     getThreadById,
-    getThreadRow,
-    getDirectLabel
+    getThreadRow
   };
 }

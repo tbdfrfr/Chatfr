@@ -1,4 +1,5 @@
 import React from 'react';
+import { normalizeProfilePicture } from '../../features/profile/profilePictureUtils.js';
 
 export function UserLabel({ user, className = '' }) {
   const id = user?.id ?? '?';
@@ -14,7 +15,7 @@ export function UserLabel({ user, className = '' }) {
   );
 }
 
-export function PixelAvatar({ profilePicture, size = 'small' }) {
+function PixelAvatar({ profilePicture, size = 'small' }) {
   const classes = size === 'large' ? 'pixel-avatar large' : 'pixel-avatar';
 
   if (typeof profilePicture === 'string') {
@@ -36,21 +37,3 @@ export function PixelAvatar({ profilePicture, size = 'small' }) {
   );
 }
 
-function normalizeProfilePicture(profilePicture) {
-  if (typeof profilePicture === 'string' && /^data:image\/[a-z0-9.+-]+;base64,[a-z0-9+/=]+$/i.test(profilePicture.trim())) {
-    return profilePicture.trim();
-  }
-
-  if (!Array.isArray(profilePicture) || profilePicture.length !== 49) {
-    return Array.from({ length: 49 }, () => null);
-  }
-
-  return profilePicture.map((cell) => {
-    if (typeof cell !== 'string') {
-      return null;
-    }
-
-    const color = cell.trim().toLowerCase();
-    return /^#[0-9a-f]{6}$/.test(color) ? color : null;
-  });
-}

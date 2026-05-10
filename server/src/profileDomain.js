@@ -5,7 +5,7 @@ import {
   isImageProfilePicture
 } from './chatFormatting.js';
 
-export const TBD_ACCOUNT_IMAGE_URL = new URL('../../IMG_1687.JPG', import.meta.url);
+const TBD_ACCOUNT_IMAGE_URL = new URL('../../IMG_1687.JPG', import.meta.url);
 
 export function createProfileDomain({ pool }) {
   async function seedTbdAccountProfilePicture() {

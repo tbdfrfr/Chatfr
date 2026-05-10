@@ -1,7 +1,7 @@
 const API_BASE = normalizeBase(import.meta.env.VITE_API_BASE || '');
 const WS_BASE = normalizeBase(import.meta.env.VITE_WS_BASE || '');
 
-export function authHeaders(token) {
+function authHeaders(token) {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 

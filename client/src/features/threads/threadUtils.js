@@ -19,7 +19,7 @@ export function getDmOtherUser(thread, meId) {
   return members.find((member) => Number(member.id) !== Number(meId)) || null;
 }
 
-export function userLabelText(user) {
+function userLabelText(user) {
   if (!user) {
     return 'Unknown';
   }

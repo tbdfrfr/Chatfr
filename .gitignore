@@ -11,8 +11,3 @@ dist
 coverage
 *.tsbuildinfo
 .DS_Store
-client/node_modules
-client/dist
-server/node_modules
-audit-bagcat-*/
-audit-bagcat.sh

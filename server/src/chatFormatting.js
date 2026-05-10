@@ -1,12 +1,11 @@
-export const PROFILE_PICTURE_GRID_SIZE = 7;
-export const PROFILE_PICTURE_CELL_COUNT = PROFILE_PICTURE_GRID_SIZE * PROFILE_PICTURE_GRID_SIZE;
+const PROFILE_PICTURE_GRID_SIZE = 7;
+const PROFILE_PICTURE_CELL_COUNT = PROFILE_PICTURE_GRID_SIZE * PROFILE_PICTURE_GRID_SIZE;
 export const MAX_GROUP_MEMBER_COUNT = 100;
-export const GROUP_NAME_FONT_OPTIONS = new Set(['space-grotesk', 'nunito', 'pacifico', 'playfair', 'bebas-neue', 'oswald', 'raleway', 'merriweather', 'cinzel', 'rubik', 'outfit', 'manrope', 'comfortaa', 'caveat', 'lobster', 'anton', 'fira-code', 'ibm-plex-serif', 'josefin-sans', 'orbitron']);
-export const GROUP_NAME_COLOR_OPTIONS = new Set(['#e63946', '#ff6b6b', '#f97316', '#ff9f1c', '#ffd166', '#f1fa8c', '#a3e635', '#06d6a0', '#2ec4b6', '#14b8a6', '#118ab2', '#3a86ff', '#073b4c', '#8b5cf6', '#8338ec', '#c77dff', '#b5179e', '#ff4fa3', '#ef476f', '#eeeeee']);
-export const DEFAULT_GROUP_NAME_FONT = 'space-grotesk';
-export const DEFAULT_GROUP_NAME_COLOR = '#eeeeee';
+const GROUP_NAME_FONT_OPTIONS = new Set(['space-grotesk', 'nunito', 'pacifico', 'playfair', 'bebas-neue', 'oswald', 'raleway', 'merriweather', 'cinzel', 'rubik', 'outfit', 'manrope', 'comfortaa', 'caveat', 'lobster', 'anton', 'fira-code', 'ibm-plex-serif', 'josefin-sans', 'orbitron']);
+const GROUP_NAME_COLOR_OPTIONS = new Set(['#e63946', '#ff6b6b', '#f97316', '#ff9f1c', '#ffd166', '#f1fa8c', '#a3e635', '#06d6a0', '#2ec4b6', '#14b8a6', '#118ab2', '#3a86ff', '#073b4c', '#8b5cf6', '#8338ec', '#c77dff', '#b5179e', '#ff4fa3', '#ef476f', '#eeeeee']);
+const DEFAULT_GROUP_NAME_FONT = 'space-grotesk';
+const DEFAULT_GROUP_NAME_COLOR = '#eeeeee';
 export const TBD_ACCOUNT_ID = 1;
-export const TBD_ACCOUNT_NAME = 'tbd';
 
 export function isImageProfilePicture(value) {
   return typeof value === 'string' && value.trim().startsWith('data:image/');
