@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
-import { normalizeProfilePicture, ProfilePictureEditor } from '../profile/ProfilePictureEditor.jsx';
 import { Modal } from '../../components/ui/Modal.jsx';
+import { ProfilePictureEditor } from '../profile/ProfilePictureEditor.jsx';
+import { normalizeProfilePicture } from '../profile/profilePictureUtils.js';
 
 export function SettingsModal({ token, me, onClose, onSaved, onLogout }) {
   const [profileDraft, setProfileDraft] = useState(me.displayName || '');

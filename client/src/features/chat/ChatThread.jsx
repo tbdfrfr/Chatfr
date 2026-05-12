@@ -1,6 +1,8 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { UserLabel } from '../../components/ui/UserLabel.jsx';
+import { MessageContent } from './MessageContent.jsx';
+import { useMentionUsers } from './messageMentions.js';
 import { getDmOtherUser } from '../threads/threadUtils.js';
 import { getGroupNameStyle } from '../groups/groupHelpers.js';
 
@@ -13,7 +15,9 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
   const [sending, setSending] = useState(false);
   const scrollerRef = useRef(null);
   const composerRef = useRef(null);
+  const composerMentionsRef = useRef(null);
   const isNearBottomRef = useRef(true);
+  const { parts: draftParts, mentionUsers: draftMentionUsers } = useMentionUsers(draft, token);
 
   const scrollToBottom = (behavior = 'auto') => {
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior });
@@ -30,6 +34,12 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
     isNearBottomRef.current = distanceFromBottom < 120;
   };
 
+  const syncComposerMentions = () => {
+    if (composerRef.current && composerMentionsRef.current) {
+      composerMentionsRef.current.scrollTop = composerRef.current.scrollTop;
+    }
+  };
+
   const resizeComposer = () => {
     const element = composerRef.current;
 
@@ -42,6 +52,7 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
     const nextHeight = Math.min(element.scrollHeight, maxHeight);
     element.style.height = `${nextHeight}px`;
     element.style.overflowY = element.scrollHeight > maxHeight ? 'auto' : 'hidden';
+    syncComposerMentions();
   };
 
   useEffect(() => {
@@ -193,7 +204,7 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
         {messages.map((message) => (
           <div key={message.id} className="message-row">
             <UserLabel user={message.user} className="message-name" />
-            <p>{message.content}</p>
+            <MessageContent content={message.content} token={token} />
           </div>
         ))}
       </div>
@@ -201,7 +212,16 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
       <form className="composer" onSubmit={send}>
         <div className="composer-shell">
           <div className="composer-inner">
-            <textarea ref={composerRef} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} placeholder="Write a message" rows={1} />
+            <div className="composer-input-wrap">
+              <div className="composer-mentions" ref={composerMentionsRef} aria-hidden="true">
+                {draftParts.map((part, index) => (
+                  part.type === 'mention' && draftMentionUsers[part.id]
+                    ? <span key={index} className="message-mention">{part.text}</span>
+                    : <span key={index}>{part.text}</span>
+                ))}
+              </div>
+              <textarea ref={composerRef} value={draft} onChange={(event) => setDraft(event.target.value)} onKeyDown={onComposerKeyDown} onScroll={syncComposerMentions} placeholder="Write a message" rows={1} />
+            </div>
             <button className="primary composer-send" type="submit" disabled={sending || !draft.trim()}>{sending ? '...' : 'Send'}</button>
           </div>
         </div>

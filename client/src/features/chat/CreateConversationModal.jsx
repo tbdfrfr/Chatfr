@@ -254,7 +254,7 @@ export function CreateConversationModal({ token, me, onClose, onCreated }) {
                   : dmLookupError
                   ? <span className="dm-preview-text error-text dm-error-text">{dmLookupError}</span>
                   : dmLookup
-                    ? <UserLabel user={dmLookup} className="preview-user-label" />
+                    ? <UserLabel user={dmLookup} />
                     : <span className="dm-preview-text muted-text">No user selected.</span>}
               </div>
             </div>
@@ -326,7 +326,7 @@ export function CreateConversationModal({ token, me, onClose, onCreated }) {
                   : groupLookupError
                   ? <span className="dm-preview-text error-text dm-error-text">{groupLookupError}</span>
                   : groupLookup
-                    ? <UserLabel user={groupLookup} className="preview-user-label" />
+                    ? <UserLabel user={groupLookup} />
                     : <span className="dm-preview-text muted-text">No user selected.</span>}
               </div>
 

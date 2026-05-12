@@ -258,7 +258,7 @@ export function GroupEditorModal({ token, me, thread, canEdit, onClose, onSaved,
                 : groupLookupError
                 ? <span className="dm-preview-text error-text dm-error-text">{groupLookupError}</span>
                 : groupLookup
-                  ? <UserLabel user={groupLookup} className="preview-user-label" />
+                  ? <UserLabel user={groupLookup} />
                   : <span className="dm-preview-text muted-text">No user selected.</span>}
             </div>
 

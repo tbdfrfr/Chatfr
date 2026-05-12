@@ -5,8 +5,6 @@ import {
   normalizeProfilePicture
 } from './profilePictureUtils.js';
 
-export { normalizeProfilePicture } from './profilePictureUtils.js';
-
 export function ProfilePictureEditor({ value, onChange }) {
   const [selectedHsv, setSelectedHsv] = useState(() => hexToHsv(DEFAULT_PROFILE_PICTURE_COLOR));
   const [isErasing, setIsErasing] = useState(false);
