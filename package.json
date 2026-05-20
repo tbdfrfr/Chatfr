@@ -9,8 +9,9 @@
   "scripts": {
     "dev": "concurrently -k \"npm run dev --workspace server\" \"npm run dev --workspace client\"",
     "start": "npm run start --workspace server",
+    "test": "npm run test --workspace server",
     "build": "npm run check --workspace server && npm run build --workspace client",
-    "db:start": "docker compose up -d db",
+    "db:start": "docker compose up -d db redis",
     "db:stop": "docker compose down"
   },
   "devDependencies": {

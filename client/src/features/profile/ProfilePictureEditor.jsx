@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   DEFAULT_PROFILE_PICTURE_COLOR,
   PROFILE_PICTURE_EMPTY,
   normalizeProfilePicture
-} from './profilePictureUtils.js';
+} from '../../lib/profilePictureUtils.js';
 
 export function ProfilePictureEditor({ value, onChange }) {
   const [selectedHsv, setSelectedHsv] = useState(() => hexToHsv(DEFAULT_PROFILE_PICTURE_COLOR));

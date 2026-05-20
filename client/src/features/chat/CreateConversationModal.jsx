@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { UserLabel } from '../../components/ui/UserLabel.jsx';
 import { Modal } from '../../components/ui/Modal.jsx';
@@ -13,7 +13,7 @@ import {
   normalizeGroupNameFont
 } from '../groups/groupHelpers.js';
 
-export function CreateConversationModal({ token, me, onClose, onCreated }) {
+export function CreateConversationModal({ me, onClose, onCreated }) {
   const [step, setStep] = useState('menu');
   const [dmUserNumber, setDmUserNumber] = useState('');
   const [dmLookup, setDmLookup] = useState(null);
@@ -60,7 +60,7 @@ export function CreateConversationModal({ token, me, onClose, onCreated }) {
       return null;
     }
 
-    const data = await api(`/api/users/${value}`, { token });
+    const data = await api(`/api/users/${value}`);
     return data.user;
   };
 
@@ -71,7 +71,7 @@ export function CreateConversationModal({ token, me, onClose, onCreated }) {
       return;
     }
 
-    const data = await api('/api/dm/start', { token, method: 'POST', body: { userNumber } });
+    const data = await api('/api/dm/start', { method: 'POST', body: { userNumber } });
     onCreated(data.thread);
     closeDialog();
   };
@@ -87,7 +87,7 @@ export function CreateConversationModal({ token, me, onClose, onCreated }) {
       return;
     }
 
-    const data = await api('/api/groups', { token, method: 'POST', body: { name, memberNumbers, nameColor, nameFont } });
+    const data = await api('/api/groups', { method: 'POST', body: { name, memberNumbers, nameColor, nameFont } });
     onCreated(data.thread);
     closeDialog();
   };
@@ -224,16 +224,27 @@ export function CreateConversationModal({ token, me, onClose, onCreated }) {
       onBack={step === 'menu' ? null : () => setStep('menu')}
     >
       {step === 'menu' ? (
-        <div className="create-shell">
-          <div className="create-intro">Choose what you want to start.</div>
+        <div className="create-shell create-menu-shell">
+          <div className="create-intro">
+            <strong>Start something new</strong>
+            <span>Pick the conversation type.</span>
+          </div>
           <div className="create-kind-grid">
             <button className="create-kind-card" type="button" onClick={() => setStep('dm')}>
-              <strong>Direct message</strong>
-              <span>One person, private thread</span>
+              <span className="create-kind-mark" aria-hidden="true">1</span>
+              <span className="create-kind-copy">
+                <strong>Direct message</strong>
+                <span>One person, private thread</span>
+              </span>
+              <span className="create-kind-action">Open DM</span>
             </button>
             <button className="create-kind-card" type="button" onClick={() => setStep('group')}>
-              <strong>Group chat</strong>
-              <span>Add two or more members</span>
+              <span className="create-kind-mark" aria-hidden="true">+</span>
+              <span className="create-kind-copy">
+                <strong>Group chat</strong>
+                <span>Add two or more members</span>
+              </span>
+              <span className="create-kind-action">Create group</span>
             </button>
           </div>
         </div>

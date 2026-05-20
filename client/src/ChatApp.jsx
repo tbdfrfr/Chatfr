@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { api } from './lib/api.js';
-import { clearStoredSession, getStoredSession, saveStoredSession, saveStoredUser } from './lib/storage.js';
+import { clearStoredSession, getStoredUser, saveStoredUser } from './lib/storage.js';
 import { AuthScreen, SignupUserNumberNotice } from './features/auth/AuthScreen.jsx';
 import { ThreadSidebar } from './features/threads/ThreadSidebar.jsx';
 import { threadMatchesSearch } from './features/threads/threadUtils.js';
@@ -11,41 +11,47 @@ import { useChatSocket } from './features/chat/useChatSocket.js';
 import { SettingsModal } from './features/settings/SettingsModal.jsx';
 
 export default function App() {
-  const [token, setToken] = useState(() => getStoredSession().token);
-  const [me, setMe] = useState(() => getStoredSession().user);
-  const [sessionSource, setSessionSource] = useState(() => (getStoredSession().token ? 'stored' : null));
-  const [loading, setLoading] = useState(!!token && sessionSource === 'stored');
+  const [me, setMe] = useState(() => getStoredUser());
+  const [loading, setLoading] = useState(true);
   const [signupNoticeUserNumber, setSignupNoticeUserNumber] = useState(null);
 
   useEffect(() => {
-    if (!token || sessionSource !== 'stored') {
-      setLoading(false);
-      return;
-    }
+    let cancelled = false;
 
-    api('/api/me', { token })
-      .then((data) => setMe(data.user))
-      .catch(() => {
-        clearStoredSession();
-        setToken(null);
-        setMe(null);
+    api('/api/me')
+      .then((data) => {
+        if (!cancelled) {
+          setMe(data.user);
+        }
       })
-      .finally(() => setLoading(false));
-  }, [sessionSource, token]);
+      .catch(() => {
+        if (!cancelled) {
+          clearStoredSession();
+          setMe(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
-    if (!token || !me) {
+    if (!me) {
       return;
     }
 
     saveStoredUser(me);
-  }, [token, me]);
+  }, [me]);
 
-  const onAuth = (nextToken, user, options = {}) => {
-    saveStoredSession(nextToken, user);
-    setToken(nextToken);
+  const onAuth = (user, options = {}) => {
+    saveStoredUser(user);
     setMe(user);
-    setSessionSource('fresh');
 
     if (options.showUserNumberNotice) {
       setSignupNoticeUserNumber(user?.id ?? null);
@@ -53,10 +59,9 @@ export default function App() {
   };
 
   const logout = () => {
+    api('/api/auth/logout', { method: 'POST' }).catch(() => {});
     clearStoredSession();
-    setToken(null);
     setMe(null);
-    setSessionSource(null);
     setSignupNoticeUserNumber(null);
   };
 
@@ -64,13 +69,13 @@ export default function App() {
     return <Shell><div>Loading session...</div></Shell>;
   }
 
-  if (!token || !me) {
+  if (!me) {
     return <AuthScreen onAuth={onAuth} />;
   }
 
   return (
     <>
-      <ChatApp token={token} me={me} onMeChange={setMe} onLogout={logout} />
+      <ChatApp me={me} onMeChange={setMe} onLogout={logout} />
       {signupNoticeUserNumber ? (
         <SignupUserNumberNotice
           userNumber={signupNoticeUserNumber}
@@ -81,7 +86,7 @@ export default function App() {
   );
 }
 
-function ChatApp({ token, me, onMeChange, onLogout }) {
+function ChatApp({ me, onMeChange, onLogout }) {
   const [threads, setThreads] = useState([]);
   const [currentThreadId, setCurrentThreadId] = useState('global');
   const [threadSearch, setThreadSearch] = useState('');
@@ -97,7 +102,6 @@ function ChatApp({ token, me, onMeChange, onLogout }) {
   }, []);
 
   useChatSocket({
-    token,
     meId: me.id,
     onMeChange,
     onMessage: (payload) => {
@@ -111,7 +115,7 @@ function ChatApp({ token, me, onMeChange, onLogout }) {
   });
 
   async function loadThreads() {
-    const data = await api('/api/threads', { token });
+    const data = await api('/api/threads');
     setThreads(data.threads);
   }
 
@@ -169,7 +173,6 @@ function ChatApp({ token, me, onMeChange, onLogout }) {
     try {
       setThreadActionError('');
       await api(`/api/threads/${encodeURIComponent(threadId)}/leave`, {
-        token,
         method: 'POST'
       });
 
@@ -213,12 +216,11 @@ function ChatApp({ token, me, onMeChange, onLogout }) {
         />
 
       <main className="chat-shell">
-        <ChatThread token={token} thread={currentThread} me={me} onEditGroup={openGroupEditor} />
+        <ChatThread thread={currentThread} me={me} onEditGroup={openGroupEditor} />
       </main>
 
       {createOpen ? (
         <CreateConversationModal
-          token={token}
           me={me}
           onClose={closeCreateDialog}
           onCreated={handleThreadCreated}
@@ -227,7 +229,6 @@ function ChatApp({ token, me, onMeChange, onLogout }) {
 
       {groupEditorOpen && groupEditorThread ? (
         <GroupEditorModal
-          token={token}
           me={me}
           thread={groupEditorThread}
           canEdit={groupEditorCanEdit}
@@ -239,7 +240,6 @@ function ChatApp({ token, me, onMeChange, onLogout }) {
 
       {settingsOpen ? (
         <SettingsModal
-          token={token}
           me={me}
           onClose={() => setSettingsOpen(false)}
           onSaved={handleSettingsSaved}

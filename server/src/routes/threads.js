@@ -1,11 +1,11 @@
 import crypto from 'crypto';
 import { normalizeDisplayName } from '../auth.js';
-import { allowMessage } from '../rateLimit.js';
 import {
   MAX_GROUP_MEMBER_COUNT,
   normalizeGroupNameColor,
   normalizeGroupNameFont
 } from '../chatFormatting.js';
+import { threadRouteSchemas } from '../validationSchemas.js';
 
 export async function threadRoutes(app, options) {
   const {
@@ -19,14 +19,15 @@ export async function threadRoutes(app, options) {
     getOrCreateDmThread,
     hydrateMessage,
     formatMessage,
-    broadcastThreadUpdate
+    broadcastThreadUpdate,
+    rateLimiter
   } = options;
 
   app.get('/api/threads', { preHandler: app.authenticate }, async (request) => {
     return { threads: await listThreads(request.userId) };
   });
 
-  app.post('/api/dm/start', { preHandler: app.authenticate }, async (request, reply) => {
+  app.post('/api/dm/start', { preHandler: [app.authenticate, app.requireCsrf], schema: threadRouteSchemas.dmStart }, async (request, reply) => {
     const targetUserId = Number(request.body?.userNumber);
 
     if (!Number.isInteger(targetUserId)) {
@@ -46,7 +47,7 @@ export async function threadRoutes(app, options) {
     return reply.send({ thread });
   });
 
-  app.post('/api/groups', { preHandler: app.authenticate }, async (request, reply) => {
+  app.post('/api/groups', { preHandler: [app.authenticate, app.requireCsrf], schema: threadRouteSchemas.createGroup }, async (request, reply) => {
     const name = normalizeDisplayName(request.body?.name);
     const nameColor = normalizeGroupNameColor(request.body?.nameColor);
     const nameFont = normalizeGroupNameFont(request.body?.nameFont);
@@ -84,7 +85,7 @@ export async function threadRoutes(app, options) {
     return reply.send({ thread });
   });
 
-  app.patch('/api/groups/:threadId', { preHandler: app.authenticate }, async (request, reply) => {
+  app.patch('/api/groups/:threadId', { preHandler: [app.authenticate, app.requireCsrf], schema: threadRouteSchemas.updateGroup }, async (request, reply) => {
     const threadId = String(request.params.threadId);
     const name = normalizeDisplayName(request.body?.name);
     const nameColor = normalizeGroupNameColor(request.body?.nameColor);
@@ -129,7 +130,7 @@ export async function threadRoutes(app, options) {
     return reply.send({ thread: await getThreadById(threadId, request.userId) });
   });
 
-  app.delete('/api/groups/:threadId', { preHandler: app.authenticate }, async (request, reply) => {
+  app.delete('/api/groups/:threadId', { preHandler: [app.authenticate, app.requireCsrf], schema: threadRouteSchemas.threadId }, async (request, reply) => {
     const threadId = String(request.params.threadId);
 
     const thread = await getThreadRow(threadId);
@@ -145,7 +146,7 @@ export async function threadRoutes(app, options) {
     return { ok: true, deleted: true };
   });
 
-  app.post('/api/threads/:threadId/leave', { preHandler: app.authenticate }, async (request, reply) => {
+  app.post('/api/threads/:threadId/leave', { preHandler: [app.authenticate, app.requireCsrf], schema: threadRouteSchemas.threadId }, async (request, reply) => {
     const threadId = String(request.params.threadId);
 
     if (threadId === 'global') {
@@ -160,7 +161,7 @@ export async function threadRoutes(app, options) {
     return { ok: true, deleted: true };
   });
 
-  app.get('/api/threads/:threadId/messages', { preHandler: app.authenticate }, async (request, reply) => {
+  app.get('/api/threads/:threadId/messages', { preHandler: app.authenticate, schema: threadRouteSchemas.messages }, async (request, reply) => {
     const threadId = String(request.params.threadId);
     const before = request.query.before ? Number(request.query.before) : null;
     const limit = Math.min(Math.max(Number(request.query.limit || 50), 1), 100);
@@ -200,7 +201,7 @@ export async function threadRoutes(app, options) {
     };
   });
 
-  app.post('/api/threads/:threadId/messages', { preHandler: app.authenticate }, async (request, reply) => {
+  app.post('/api/threads/:threadId/messages', { preHandler: [app.authenticate, app.requireCsrf], schema: threadRouteSchemas.createMessage }, async (request, reply) => {
     const threadId = String(request.params.threadId);
     const content = typeof request.body?.content === 'string' ? request.body.content.trim() : '';
 
@@ -212,7 +213,7 @@ export async function threadRoutes(app, options) {
       return reply.code(404).send({ error: 'Thread not found.' });
     }
 
-    if (!allowMessage(request.userId)) {
+    if (!(await rateLimiter.allowMessage(request.userId))) {
       return reply.code(429).send({ error: 'Rate limit exceeded. Try again shortly.' });
     }
 

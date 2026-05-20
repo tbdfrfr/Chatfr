@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { UserLabel } from '../../components/ui/UserLabel.jsx';
 import { MessageContent } from './MessageContent.jsx';
@@ -6,7 +6,7 @@ import { useMentionUsers } from './messageMentions.js';
 import { getDmOtherUser } from '../threads/threadUtils.js';
 import { getGroupNameStyle } from '../groups/groupHelpers.js';
 
-export function ChatThread({ token, thread, me, onEditGroup }) {
+export function ChatThread({ thread, me, onEditGroup }) {
   const [messages, setMessages] = useState([]);
   const [draft, setDraft] = useState('');
   const [hasMore, setHasMore] = useState(true);
@@ -17,7 +17,7 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
   const composerRef = useRef(null);
   const composerMentionsRef = useRef(null);
   const isNearBottomRef = useRef(true);
-  const { parts: draftParts, mentionUsers: draftMentionUsers } = useMentionUsers(draft, token);
+  const { parts: draftParts, mentionUsers: draftMentionUsers } = useMentionUsers(draft);
 
   const scrollToBottom = (behavior = 'auto') => {
     scrollerRef.current?.scrollTo({ top: scrollerRef.current.scrollHeight, behavior });
@@ -94,7 +94,7 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
 
   async function loadInitial() {
     setLoading(true);
-    const data = await api(`/api/threads/${thread.id}/messages`, { token });
+    const data = await api(`/api/threads/${thread.id}/messages`);
     setMessages(data.messages);
     setHasMore(data.hasMore);
     setLoading(false);
@@ -113,7 +113,7 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
     const before = messages[0].id;
     const previousHeight = scrollerRef.current.scrollHeight;
     const previousTop = scrollerRef.current.scrollTop;
-    const data = await api(`/api/threads/${thread.id}/messages?before=${before}`, { token });
+    const data = await api(`/api/threads/${thread.id}/messages?before=${before}`);
     setMessages((current) => [...data.messages, ...current]);
     setHasMore(data.hasMore);
     requestAnimationFrame(() => {
@@ -133,7 +133,6 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
     try {
       setSending(true);
       const data = await api(`/api/threads/${thread.id}/messages`, {
-        token,
         method: 'POST',
         body: { content }
       });
@@ -204,7 +203,7 @@ export function ChatThread({ token, thread, me, onEditGroup }) {
         {messages.map((message) => (
           <div key={message.id} className="message-row">
             <UserLabel user={message.user} className="message-name" />
-            <MessageContent content={message.content} token={token} />
+            <MessageContent content={message.content} />
           </div>
         ))}
       </div>

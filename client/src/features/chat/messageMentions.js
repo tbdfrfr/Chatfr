@@ -27,7 +27,7 @@ function buildMessageParts(content) {
   return parts;
 }
 
-export function useMentionUsers(content, token) {
+export function useMentionUsers(content) {
   const [mentionUsers, setMentionUsers] = useState({});
   const parts = useMemo(() => buildMessageParts(content), [content]);
   const mentionIds = useMemo(() => (
@@ -45,7 +45,7 @@ export function useMentionUsers(content, token) {
 
     Promise.allSettled(unresolvedMentionIds.map(async (id) => {
       try {
-        const data = await api(`/api/users/${id}`, { token });
+        const data = await api(`/api/users/${id}`);
         return { id, user: data.user || null };
       } catch {
         return { id, user: null };
@@ -71,7 +71,7 @@ export function useMentionUsers(content, token) {
     return () => {
       cancelled = true;
     };
-  }, [mentionIds, mentionUsers, token]);
+  }, [mentionIds, mentionUsers]);
 
   return { parts, mentionUsers };
 }

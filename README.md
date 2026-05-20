@@ -24,8 +24,8 @@ Frontend runs on http://localhost:5173, backend on http://localhost:3001.
 ## Tech Stack
 
 - Frontend: React 19 + Vite + WebSocket
-- Backend: Fastify 5 + Node.js + PostgreSQL
-- Authentication: JWT + bcrypt
+- Backend: Fastify 5 + Node.js + PostgreSQL + Redis-backed rate limiting
+- Authentication: HttpOnly session cookie + JWT + bcrypt
 - Real-time: WebSocket
 
 ## Project Structure
@@ -46,10 +46,12 @@ server/src/
 
 ```bash
 npm run dev        # Run frontend and backend concurrently
+npm test           # Run server API/domain tests
 npm run build      # Build for production
-npm run db:start   # Start PostgreSQL
-npm run db:stop    # Stop PostgreSQL
+npm run db:start   # Start PostgreSQL and Redis
+npm run db:stop    # Stop PostgreSQL and Redis
 ```
+
 
 ## Contributing
 

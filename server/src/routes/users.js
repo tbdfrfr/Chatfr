@@ -1,15 +1,16 @@
 import { normalizeDisplayName } from '../auth.js';
 import { TBD_ACCOUNT_ID, normalizeProfilePictureInput } from '../chatFormatting.js';
+import { userRouteSchemas } from '../validationSchemas.js';
 
 export async function userRoutes(app, options) {
-  const { pool, getUser, toUserPayload, broadcastUserUpdate } = options;
+  const { pool, getUser, toUserPayload, broadcastUserUpdate, rateLimiter } = options;
 
   app.get('/api/me', { preHandler: app.authenticate }, async (request) => {
     const user = await getUser(request.userId);
     return { user: toUserPayload(user) };
   });
 
-  app.patch('/api/me/display-name', { preHandler: app.authenticate }, async (request, reply) => {
+  app.patch('/api/me/display-name', { preHandler: [app.authenticate, app.requireCsrf], schema: userRouteSchemas.displayName }, async (request, reply) => {
     const displayName = normalizeDisplayName(request.body?.displayName);
 
     await pool.query('UPDATE users SET display_name = $1 WHERE id = $2', [displayName, request.userId]);
@@ -18,7 +19,7 @@ export async function userRoutes(app, options) {
     return reply.send({ user: toUserPayload(user) });
   });
 
-  app.patch('/api/me/profile-picture', { preHandler: app.authenticate }, async (request, reply) => {
+  app.patch('/api/me/profile-picture', { preHandler: [app.authenticate, app.requireCsrf], schema: userRouteSchemas.profilePicture }, async (request, reply) => {
     let profilePicture;
 
     try {
@@ -35,11 +36,11 @@ export async function userRoutes(app, options) {
     return reply.send({ user: toUserPayload(user) });
   });
 
-  app.get('/api/users/:userNumber', { preHandler: app.authenticate }, async (request, reply) => {
+  app.get('/api/users/:userNumber', { preHandler: app.authenticate, schema: userRouteSchemas.userNumber }, async (request, reply) => {
     const userId = Number(request.params.userNumber);
 
-    if (!Number.isInteger(userId)) {
-      return reply.code(400).send({ error: 'Invalid user number.' });
+    if (!(await rateLimiter.allowUserLookup({ userId: request.userId, ip: request.ip }))) {
+      return reply.code(429).send({ error: 'Too many user lookups. Try again later.' });
     }
 
     const user = await getUser(userId);

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { UserLabel } from '../../components/ui/UserLabel.jsx';
 import { useMentionUsers } from './messageMentions.js';
@@ -72,8 +72,8 @@ function MentionToken({ mention, user }) {
   );
 }
 
-export function MessageContent({ content, token }) {
-  const { parts, mentionUsers } = useMentionUsers(content, token);
+export function MessageContent({ content }) {
+  const { parts, mentionUsers } = useMentionUsers(content);
 
   return (
     <p>

@@ -1,4 +1,3 @@
-import React from 'react';
 import { UserLabel } from '../../components/ui/UserLabel.jsx';
 import { getDmOtherUser } from './threadUtils.js';
 

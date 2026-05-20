@@ -1,10 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api } from '../../lib/api.js';
 import { Modal } from '../../components/ui/Modal.jsx';
 import { UserLabel } from '../../components/ui/UserLabel.jsx';
-import { DEFAULT_GROUP_NAME_COLOR, DEFAULT_GROUP_NAME_FONT, GROUP_NAME_COLOR_OPTIONS, GROUP_NAME_FONT_OPTIONS, MAX_GROUP_MEMBER_COUNT, groupNameFontFamily, normalizeGroupNameColor, normalizeGroupNameFont } from './groupHelpers.js';
+import { GROUP_NAME_COLOR_OPTIONS, GROUP_NAME_FONT_OPTIONS, MAX_GROUP_MEMBER_COUNT, groupNameFontFamily, normalizeGroupNameColor, normalizeGroupNameFont } from './groupHelpers.js';
 
-export function GroupEditorModal({ token, me, thread, canEdit, onClose, onSaved, onDeleted }) {
+export function GroupEditorModal({ me, thread, canEdit, onClose, onSaved, onDeleted }) {
   const [groupName, setGroupName] = useState(thread.name || '');
   const [groupNameColor, setGroupNameColor] = useState(normalizeGroupNameColor(thread.nameColor));
   const [groupNameFont, setGroupNameFont] = useState(normalizeGroupNameFont(thread.nameFont));
@@ -48,7 +48,7 @@ export function GroupEditorModal({ token, me, thread, canEdit, onClose, onSaved,
     const timeoutId = setTimeout(async () => {
       setGroupLookupLoading(true);
       try {
-        const data = await api(`/api/users/${value}`, { token });
+        const data = await api(`/api/users/${value}`);
         const user = data.user;
 
         if (Number(user.id) === Number(me.id)) {
@@ -67,7 +67,7 @@ export function GroupEditorModal({ token, me, thread, canEdit, onClose, onSaved,
     }, 250);
 
     return () => clearTimeout(timeoutId);
-  }, [groupMemberInput, me.id, token, canEdit]);
+  }, [groupMemberInput, me.id, canEdit]);
 
   const canAddGroupMember = Boolean(groupLookup) && Number(groupLookup.id) !== Number(me.id) && groupMembers.length + 1 < MAX_GROUP_MEMBER_COUNT;
 
@@ -115,7 +115,6 @@ export function GroupEditorModal({ token, me, thread, canEdit, onClose, onSaved,
 
       const memberNumbers = groupMembers.map((member) => String(member.id));
       const data = await api(`/api/groups/${encodeURIComponent(thread.id)}`, {
-        token,
         method: 'PATCH',
         body: {
           name: groupName.trim(),
@@ -144,7 +143,6 @@ export function GroupEditorModal({ token, me, thread, canEdit, onClose, onSaved,
       setStatus('');
 
       await api(`/api/groups/${encodeURIComponent(thread.id)}`, {
-        token,
         method: 'DELETE'
       });
 

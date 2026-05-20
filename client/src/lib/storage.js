@@ -1,30 +1,39 @@
-const tokenKey = 'chatfr.token';
+const csrfKey = 'chatfr.csrf';
 const userKey = 'chatfr.user';
 
-export function getStoredSession() {
-  return {
-    token: localStorage.getItem(tokenKey),
-    user: readStoredUser()
-  };
-}
-
-export function saveStoredSession(token, user) {
-  localStorage.setItem(tokenKey, token);
-  saveStoredUser(user);
+export function getStoredUser() {
+  return readStoredUser();
 }
 
 export function saveStoredUser(user) {
-  localStorage.setItem(userKey, JSON.stringify(user));
+  sessionStorage.setItem(userKey, JSON.stringify(user));
+}
+
+export function getStoredCsrfToken() {
+  return readStoredValue(csrfKey);
+}
+
+export function saveStoredCsrfToken(token) {
+  sessionStorage.setItem(csrfKey, token);
+}
+
+export function clearStoredCsrfToken() {
+  sessionStorage.removeItem(csrfKey);
 }
 
 export function clearStoredSession() {
-  localStorage.removeItem(tokenKey);
-  localStorage.removeItem(userKey);
+  sessionStorage.removeItem(userKey);
+  sessionStorage.removeItem(csrfKey);
 }
 
 function readStoredUser() {
+  return readStoredValue(userKey, true);
+}
+
+function readStoredValue(key, parseJson = false) {
   try {
-    return JSON.parse(localStorage.getItem(userKey) || 'null');
+    const value = sessionStorage.getItem(key);
+    return parseJson ? JSON.parse(value || 'null') : value;
   } catch {
     return null;
   }

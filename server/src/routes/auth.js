@@ -1,19 +1,27 @@
-import { allowLoginAttempt } from '../rateLimit.js';
 import {
+  clearSessionCookie,
   hashPassword,
   normalizeDisplayName,
+  signCsrfToken,
   signToken,
+  setSessionCookie,
   verifyPassword
 } from '../auth.js';
+import { authRouteSchemas } from '../validationSchemas.js';
 
 export async function authRoutes(app, options) {
-  const { pool, joinGlobal, toUserPayload } = options;
+  const { pool, joinGlobal, toUserPayload, rateLimiter } = options;
 
-  app.post('/api/auth/signup', async (request, reply) => {
+  app.get('/api/csrf', async (_request, reply) => {
+    reply.header('Cache-Control', 'no-store');
+    return { csrfToken: signCsrfToken() };
+  });
+
+  app.post('/api/auth/signup', { preHandler: app.requireCsrf, schema: authRouteSchemas.signup }, async (request, reply) => {
     const { password, displayName } = request.body || {};
 
-    if (typeof password !== 'string' || password.length < 8) {
-      return reply.code(400).send({ error: 'Password must be at least 8 characters long.' });
+    if (!(await rateLimiter.allowSignupAttempt(request.ip))) {
+      return reply.code(429).send({ error: 'Too many signup attempts. Try again later.' });
     }
 
     const passwordHash = await hashPassword(password);
@@ -22,28 +30,29 @@ export async function authRoutes(app, options) {
     const result = await pool.query(
       `INSERT INTO users (display_name, password_hash)
        VALUES ($1, $2)
-       RETURNING id, display_name, profile_picture, created_at`,
+       RETURNING id, display_name, profile_picture, session_version, created_at`,
       [name, passwordHash]
     );
 
     const user = result.rows[0];
     await joinGlobal(user.id);
+    const token = signToken(user.id, user.session_version);
+    setSessionCookie(reply, token);
 
     return reply.send({
-      token: signToken(user.id),
       user: toUserPayload(user)
     });
   });
 
-  app.post('/api/auth/login', async (request, reply) => {
+  app.post('/api/auth/login', { preHandler: app.requireCsrf, schema: authRouteSchemas.login }, async (request, reply) => {
     const { userNumber, password } = request.body || {};
     const userId = Number(userNumber);
 
-    if (!allowLoginAttempt({ userId: Number.isInteger(userId) ? userId : 'unknown', ip: request.ip })) {
+    if (!(await rateLimiter.allowLoginAttempt({ userId: Number.isInteger(userId) ? userId : 'unknown', ip: request.ip }))) {
       return reply.code(429).send({ error: 'Too many login attempts. Try again later.' });
     }
 
-    if (!Number.isInteger(userId) || typeof password !== 'string') {
+    if (!Number.isInteger(userId)) {
       return reply.code(400).send({ error: 'Invalid credentials.' });
     }
 
@@ -54,9 +63,17 @@ export async function authRoutes(app, options) {
       return reply.code(401).send({ error: 'Invalid credentials.' });
     }
 
+    const token = signToken(user.id, user.session_version);
+    setSessionCookie(reply, token);
+
     return reply.send({
-      token: signToken(user.id),
       user: toUserPayload(user)
     });
+  });
+
+  app.post('/api/auth/logout', { preHandler: [app.authenticate, app.requireCsrf] }, async (request, reply) => {
+    await pool.query('UPDATE users SET session_version = session_version + 1 WHERE id = $1', [request.userId]);
+    clearSessionCookie(reply);
+    return reply.send({ ok: true });
   });
 }

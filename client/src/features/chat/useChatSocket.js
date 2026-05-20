@@ -1,9 +1,9 @@
 import { useEffect } from 'react';
 import { connectChatSocket } from '../../lib/socket.js';
 
-export function useChatSocket({ token, meId, onMessage, onUserUpdate, onMeChange }) {
+export function useChatSocket({ meId, onMessage, onUserUpdate, onMeChange }) {
   useEffect(() => {
-    const socket = connectChatSocket(token, (payload) => {
+    const socket = connectChatSocket((payload) => {
       if (payload.type === 'message:new') {
         onMessage(payload);
       } else if (payload.type === 'user:updated' && payload.user) {
@@ -15,5 +15,5 @@ export function useChatSocket({ token, meId, onMessage, onUserUpdate, onMeChange
     });
 
     return () => socket.close();
-  }, [token, meId, onMessage, onUserUpdate, onMeChange]);
+  }, [meId, onMessage, onUserUpdate, onMeChange]);
 }

@@ -1,5 +1,4 @@
-import React from 'react';
-import { normalizeProfilePicture } from '../../features/profile/profilePictureUtils.js';
+import { normalizeProfilePicture } from '../../lib/profilePictureUtils.js';
 
 function UserAvatar({ profilePicture }) {
   if (typeof profilePicture === 'string') {

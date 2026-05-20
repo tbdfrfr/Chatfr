@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { api } from '../../lib/api.js';
 
 export function AuthScreen({ onAuth }) {
@@ -51,13 +51,22 @@ function LoginForm({ onSuccess, setError }) {
         body: { userNumber, password }
       });
 
-      onSuccess(data.token, data.user, { showUserNumberNotice: false });
+      onSuccess(data.user, { showUserNumberNotice: false });
     } catch (error) {
       setError(error.message);
     }
   };
 
-  return <AuthForm submit={submit} fields={[{ label: 'User number', value: userNumber, setValue: setUserNumber, type: 'number' }, { label: 'Password', value: password, setValue: setPassword, type: 'password' }]} cta="Enter" />;
+  return (
+    <AuthForm
+      submit={submit}
+      fields={[
+        { label: 'User number', value: userNumber, setValue: setUserNumber, type: 'number' },
+        { label: 'Password', value: password, setValue: setPassword, type: 'password' }
+      ]}
+      cta="Enter"
+    />
+  );
 }
 
 function SignupForm({ onSuccess, setError }) {
@@ -74,13 +83,22 @@ function SignupForm({ onSuccess, setError }) {
         body: { displayName, password }
       });
 
-      onSuccess(data.token, data.user, { showUserNumberNotice: true });
+      onSuccess(data.user, { showUserNumberNotice: true });
     } catch (error) {
       setError(error.message);
     }
   };
 
-  return <AuthForm submit={submit} fields={[{ label: 'Display name', value: displayName, setValue: setDisplayName, type: 'text' }, { label: 'Password', value: password, setValue: setPassword, type: 'password' }]} cta="Create account" />;
+  return (
+    <AuthForm
+      submit={submit}
+      fields={[
+        { label: 'Display name', value: displayName, setValue: setDisplayName, type: 'text' },
+        { label: 'Password', value: password, setValue: setPassword, type: 'password' }
+      ]}
+      cta="Create account"
+    />
+  );
 }
 
 function AuthForm({ submit, fields, cta }) {

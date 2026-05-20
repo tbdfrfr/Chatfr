@@ -1,40 +1,82 @@
+import {
+  clearStoredCsrfToken,
+  getStoredCsrfToken,
+  saveStoredCsrfToken
+} from './storage.js';
+
 const API_BASE = normalizeBase(import.meta.env.VITE_API_BASE || '');
 const WS_BASE = normalizeBase(import.meta.env.VITE_WS_BASE || '');
+const CSRF_HEADER_NAME = 'X-CSRF-Token';
+const UNSAFE_METHODS = new Set(['POST', 'PATCH', 'PUT', 'DELETE']);
 
-function authHeaders(token) {
-  return token ? { Authorization: `Bearer ${token}` } : {};
-}
-
-export function websocketUrl(path, token) {
+export function websocketUrl(path) {
   const base = WS_BASE || window.location.origin.replace('http', 'ws');
   const slashPath = path.startsWith('/') ? path : `/${path}`;
-  const url = new URL(`${base}${slashPath}`);
-
-  if (token) {
-    url.searchParams.set('token', token);
-  }
-
-  return url.toString();
+  return new URL(`${base}${slashPath}`).toString();
 }
 
-export async function api(path, { token, method = 'GET', body } = {}) {
+export async function api(path, { method = 'GET', body } = {}) {
   const hasBody = body !== undefined;
-  const response = await fetch(`${API_BASE}${path}`, {
-    method,
-    headers: {
-      ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-      ...authHeaders(token)
-    },
-    body: hasBody ? JSON.stringify(body) : undefined
-  });
+  const normalizedMethod = String(method || 'GET').toUpperCase();
 
-  const payload = await response.json().catch(() => ({}));
+  async function sendRequest(refreshCsrf = false) {
+    const headers = {
+      ...(hasBody ? { 'Content-Type': 'application/json' } : {})
+    };
+
+    if (UNSAFE_METHODS.has(normalizedMethod)) {
+      headers[CSRF_HEADER_NAME] = await ensureCsrfToken(refreshCsrf);
+    }
+
+    return fetch(`${API_BASE}${path}`, {
+      method: normalizedMethod,
+      credentials: 'include',
+      headers,
+      body: hasBody ? JSON.stringify(body) : undefined
+    });
+  }
+
+  let response = await sendRequest(false);
+  let payload = await response.json().catch(() => ({}));
+
+  if (UNSAFE_METHODS.has(normalizedMethod) && response.status === 403 && /csrf/i.test(String(payload.error || ''))) {
+    clearStoredCsrfToken();
+    response = await sendRequest(true);
+    payload = await response.json().catch(() => ({}));
+  }
+
+  if (payload && typeof payload.csrfToken === 'string') {
+    saveStoredCsrfToken(payload.csrfToken);
+  }
 
   if (!response.ok) {
     throw new Error(payload.error || 'Request failed');
   }
 
   return payload;
+}
+
+async function ensureCsrfToken(forceRefresh = false) {
+  if (!forceRefresh) {
+    const storedToken = getStoredCsrfToken();
+    if (storedToken) {
+      return storedToken;
+    }
+  }
+
+  const response = await fetch(`${API_BASE}/api/csrf`, {
+    method: 'GET',
+    credentials: 'include'
+  });
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok || typeof payload.csrfToken !== 'string') {
+    throw new Error(payload.error || 'Failed to initialize CSRF token');
+  }
+
+  saveStoredCsrfToken(payload.csrfToken);
+  return payload.csrfToken;
 }
 
 function normalizeBase(value) {

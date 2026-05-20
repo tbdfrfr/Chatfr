@@ -1,7 +1,7 @@
 import { websocketUrl } from './api.js';
 
-export function connectChatSocket(token, onMessage) {
-  const socket = new WebSocket(websocketUrl('/ws', token));
+export function connectChatSocket(onMessage) {
+  const socket = new WebSocket(websocketUrl('/ws'), ['chatfr']);
 
   socket.addEventListener('message', (event) => {
     try {

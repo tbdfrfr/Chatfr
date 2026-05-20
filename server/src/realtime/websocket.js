@@ -1,7 +1,8 @@
 import { WebSocketServer } from 'ws';
+import { getSessionTokenFromCookieHeader, normalizeVerifiedToken } from '../auth.js';
 
 export function registerWebsocketServer(server, options) {
-  const { clients, isAllowedWebSocketOrigin, verifyToken } = options;
+  const { clients, isAllowedWebSocketOrigin, verifyToken, getUser } = options;
   const sockets = new WebSocketServer({ noServer: true });
 
   server.on('upgrade', (request, socket, head) => {
@@ -22,9 +23,8 @@ export function registerWebsocketServer(server, options) {
     });
   });
 
-  sockets.on('connection', (socket, request) => {
-    const url = new URL(request.url, 'http://localhost');
-    const token = url.searchParams.get('token');
+  sockets.on('connection', async (socket, request) => {
+    const token = getSocketToken(request);
 
     if (!token) {
       socket.close();
@@ -34,7 +34,15 @@ export function registerWebsocketServer(server, options) {
     let userId;
 
     try {
-      userId = verifyToken(token);
+      const verified = normalizeVerifiedToken(verifyToken(token));
+      const currentUser = getUser ? await getUser(verified.userId) : null;
+
+      if (!currentUser || Number(currentUser.session_version ?? 0) !== verified.sessionVersion) {
+        socket.close();
+        return;
+      }
+
+      userId = verified.userId;
     } catch {
       socket.close();
       return;
@@ -58,4 +66,13 @@ export function registerWebsocketServer(server, options) {
       clients.delete(socket);
     });
   });
+}
+
+export function getSocketToken(request) {
+  const protocolToken = String(request.headers['sec-websocket-protocol'] || '')
+    .split(',')
+    .map((protocol) => protocol.trim())
+    .find((protocol) => protocol && protocol !== 'chatfr');
+
+  return protocolToken || getSessionTokenFromCookieHeader(request.headers.cookie);
 }
