@@ -51,7 +51,7 @@ jobs:
         run: npm run build --prefix client
 
       - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: client/dist
 
